@@ -28,7 +28,7 @@ module Jackal
           'LogicalResourceId' => properties[:logical_resource_id],
           'PhysicalResourceId' => properties.fetch(:physical_resource_id, physical_resource_id),
           'StackId' => properties.fetch(:stack_id),
-          'Status' => nil,
+          'Status' => 'SUCCESS',
           'Reason' => nil,
           'Data' => Smash.new
         )
@@ -87,12 +87,13 @@ module Jackal
       def unpack(message)
         payload = super
         payload = Smash.new(
-          Carnivore::Utils.symbolize_hash(
+          MultiJson.load(
             payload.fetch('Body', 'Message', payload)
           )
         )
         payload[:origin_type] = message[:message].get('Body', 'Type')
         payload[:origin_subject] = message[:message].get('Body', 'Subject')
+        payload
       end
 
       # Determine message validity
@@ -102,7 +103,7 @@ module Jackal
       def valid?(message)
         super do |payload|
           result = payload[:origin_type] == 'Notification' &&
-            payload[:origin_subject].downcase.include?('custom resource notification')
+            payload[:origin_subject].downcase.include?('cloudformation custom resource')
           if(result && block_given?)
             yield payload
           else

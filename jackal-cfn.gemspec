@@ -1,5 +1,5 @@
 $LOAD_PATH.unshift File.expand_path(File.dirname(__FILE__)) + '/lib/'
-require 'jackal/version'
+require 'jackal-cfn/version'
 Gem::Specification.new do |s|
   s.name = 'jackal-cfn'
   s.version = Jackal::Cfn::VERSION.version
