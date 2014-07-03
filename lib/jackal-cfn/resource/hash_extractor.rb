@@ -37,7 +37,7 @@ module Jackal
         def execute(message)
           payload = unpack(message)
           debug "Processing payload: #{payload.inspect}"
-          properties = transform_parameters(payload['ResourceProperties'])
+          properties = transform_parameters(payload)
           cfn_response = build_response(properties)
           parameters = transform_parameters(properties[:parameters])
           key = parameters[:key].split('.')

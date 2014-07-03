@@ -20,14 +20,14 @@ module Jackal
 
       # Generate response hash
       #
-      # @param resource_properties [Hash]
+      # @param payload [Hash]
       # @return [Hash] default response content
-      def build_response(resource_properties)
-        properties = transform_parameters(resource_properties)
+      def build_response(payload)
+        args = transform_parameters(payload)
         Smash.new(
-          'LogicalResourceId' => properties[:logical_resource_id],
-          'PhysicalResourceId' => properties.fetch(:physical_resource_id, physical_resource_id),
-          'StackId' => properties.fetch(:stack_id),
+          'LogicalResourceId' => args[:logical_resource_id],
+          'PhysicalResourceId' => args.fetch(:physical_resource_id, physical_resource_id),
+          'StackId' => args[:stack_id],
           'Status' => 'SUCCESS',
           'Reason' => nil,
           'Data' => Smash.new
