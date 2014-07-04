@@ -25,11 +25,11 @@ module Jackal
         #
         # @param message [Carnivore::Message]
         # @return [Truthy, Falsey]
-        def valid?(message)
-          super do |payload|
-            payload.get('ResourceProperties', 'Action') == 'hash_extractor'
-          end
-        end
+#        def valid?(message)
+#          super do |payload|
+#            payload.get('ResourceProperties', 'Action') == 'hash_extractor'
+#          end
+#        end
 
         # Process message, send value back to CFN
         #

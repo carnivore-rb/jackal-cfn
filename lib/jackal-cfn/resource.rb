@@ -28,8 +28,9 @@ module Jackal
           'LogicalResourceId' => args[:logical_resource_id],
           'PhysicalResourceId' => args.fetch(:physical_resource_id, physical_resource_id),
           'StackId' => args[:stack_id],
+          'RequestId' => args[:request_id],
           'Status' => 'SUCCESS',
-          'Reason' => nil,
+          'Reason' => 'Not provided',
           'Data' => Smash.new
         )
       end
@@ -64,7 +65,7 @@ module Jackal
         connection = response_endpoint(url.host, url.scheme)
         path = "#{url.path}?#{url.query}"
         debug "Custom resource response data: #{response.inspect}"
-        complete = connection.request(:put, path, {}, :data => JSON.dump(response))
+        complete = connection.put(path, JSON.dump(response))
         case complete.status
         when 200
           info "Custom resource response complete! (Sent to: #{url})"
@@ -102,8 +103,10 @@ module Jackal
       # @return [TrueClass, FalseClass]
       def valid?(message)
         super do |payload|
+          resource_type = payload['ResourceType'].split('::').last
           result = payload[:origin_type] == 'Notification' &&
-            payload[:origin_subject].downcase.include?('cloudformation custom resource')
+            payload[:origin_subject].downcase.include?('cloudformation custom resource') &&
+            (resource_type == 'CustomResource' || resource_type == self.class.name.split('::').last)
           if(result && block_given?)
             yield payload
           else
