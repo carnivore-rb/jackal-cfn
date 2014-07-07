@@ -8,6 +8,12 @@ module Jackal
       VALID_RESOURCE_STATUS = ['SUCCESS', 'FAILED']
 
       autoload :HashExtractor, 'jackal-cfn/resource/hash_extractor'
+      autoload :AmiManager, 'jackal-cfn/resource/ami_manager'
+
+      # Setup the dependency requirements for the callback
+      def setup(*_)
+        require 'patron'
+      end
 
       # Physical ID of the resource created
       #
@@ -92,8 +98,10 @@ module Jackal
             payload.fetch('Body', 'Message', payload)
           )
         )
+        payload = transform_parameters(payload)
         payload[:origin_type] = message[:message].get('Body', 'Type')
         payload[:origin_subject] = message[:message].get('Body', 'Subject')
+        payload[:request_type] = snakecase(payload[:request_type])
         payload
       end
 
@@ -103,10 +111,10 @@ module Jackal
       # @return [TrueClass, FalseClass]
       def valid?(message)
         super do |payload|
-          resource_type = payload['ResourceType'].split('::').last
+          resource_type = payload[:resource_type].split('::').last
           result = payload[:origin_type] == 'Notification' &&
             payload[:origin_subject].downcase.include?('cloudformation custom resource') &&
-            (resource_type == 'CustomResource' || resource_type == self.class.name.split('::').last)
+            resource_type == self.class.name.split('::').last
           if(result && block_given?)
             yield payload
           else
@@ -136,10 +144,17 @@ module Jackal
       def transform_parameters(params)
         Smash.new.tap do |new_hash|
           params.each do |key, value|
-            key = key.gsub(/(?<![A-Z])([A-Z])/, '_\1').sub(/^_/, '').downcase.to_sym
-            new_hash[key] = value
+            new_hash[snakecase(key)] = value
           end
         end
+      end
+
+      # Snake case string
+      #
+      # @param v [String]
+      # @return [Symbol]
+      def snakecase(v)
+        v.to_s.gsub(/(?<![A-Z])([A-Z])/, '_\1').sub(/^_/, '').downcase.to_sym
       end
 
     end
