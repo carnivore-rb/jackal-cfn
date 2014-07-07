@@ -5,8 +5,9 @@ module Jackal
     class Resource
       # Extract value from hash
       #
-      # Expected resource properties:
+      # Expected resource:
       #   {
+      #     "Type": "Custom::HashExtractor",
       #     "Properties": {
       #       "Parameters": {
       #         "Key": "path.to.value.in.hash",
@@ -15,21 +16,6 @@ module Jackal
       #     }
       #   }
       class HashExtractor < Resource
-
-        # Setup the dependency requirements for the callback
-        def setup(*_)
-          require 'patron'
-        end
-
-        # Validity of message
-        #
-        # @param message [Carnivore::Message]
-        # @return [Truthy, Falsey]
-#        def valid?(message)
-#          super do |payload|
-#            payload.get('ResourceProperties', 'Action') == 'hash_extractor'
-#          end
-#        end
 
         # Process message, send value back to CFN
         #
