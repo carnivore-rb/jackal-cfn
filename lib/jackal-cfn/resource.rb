@@ -5,6 +5,8 @@ module Jackal
     # Callback for resource types
     class Resource < Jackal::Callback
 
+      include Jackal::Cfn::Utils
+
       VALID_RESOURCE_STATUS = ['SUCCESS', 'FAILED']
 
       autoload :HashExtractor, 'jackal-cfn/resource/hash_extractor'
@@ -54,6 +56,7 @@ module Jackal
         session.headers['User-Agent'] = "JackalCfn/#{Jackal::Cfn::VERSION.version}"
         session
       end
+      alias_method :http_endpoint, :response_endpoint
 
       # Send response to the waiting stack
       #
@@ -92,17 +95,22 @@ module Jackal
       # @param message [Carnivore::Message]
       # @return [Smash]
       def unpack(message)
-        payload = super
-        payload = Smash.new(
-          MultiJson.load(
-            payload.fetch('Body', 'Message', payload)
+        begin
+          payload = super
+          payload = Smash.new(
+            MultiJson.load(
+              payload.fetch('Body', 'Message', payload)
+            )
           )
-        )
-        payload = transform_parameters(payload)
-        payload[:origin_type] = message[:message].get('Body', 'Type')
-        payload[:origin_subject] = message[:message].get('Body', 'Subject')
-        payload[:request_type] = snakecase(payload[:request_type])
-        payload
+          payload = transform_parameters(payload)
+          payload[:origin_type] = message[:message].get('Body', 'Type')
+          payload[:origin_subject] = message[:message].get('Body', 'Subject')
+          payload[:request_type] = snakecase(payload[:request_type])
+          payload
+        rescue MultiJson::ParseError
+          # Not our expected format so return empty payload
+          Smash.new
+        end
       end
 
       # Determine message validity
@@ -135,26 +143,6 @@ module Jackal
             )
           )
         end
-      end
-
-      # Snake case top level keys in hash
-      #
-      # @param params [Hash]
-      # @return [Hash] new hash with snake cased toplevel keys
-      def transform_parameters(params)
-        Smash.new.tap do |new_hash|
-          params.each do |key, value|
-            new_hash[snakecase(key)] = value
-          end
-        end
-      end
-
-      # Snake case string
-      #
-      # @param v [String]
-      # @return [Symbol]
-      def snakecase(v)
-        v.to_s.gsub(/(?<![A-Z])([A-Z])/, '_\1').sub(/^_/, '').downcase.to_sym
       end
 
     end
