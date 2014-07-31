@@ -6,5 +6,6 @@ module Jackal
   module Cfn
     autoload :Event, 'jackal-cfn/event'
     autoload :Resource, 'jackal-cfn/resource'
+    autoload :Utils, 'jackal-cfn/utils'
   end
 end
