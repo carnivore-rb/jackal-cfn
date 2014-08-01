@@ -5,12 +5,55 @@ module Jackal
     # Callback for resource types
     class Resource < Jackal::Callback
 
+      # Validity method for subclasses
+      module InheritedValidity
+
+        # Determine message validity
+        #
+        # @param message [Carnivore::Message]
+        # @return [TrueClass, FalseClass]
+        def valid?(message)
+          super do |payload|
+            data = payload.fetch(:data, :cfn_resource, Smash.new)
+            resource_type = data[:resource_type].to_s.split('::').last
+            result = data[:origin_type] == 'Notification' &&
+              data[:origin_subject].to_s.downcase.include?('cloudformation custom resource')
+            if(result && block_given?)
+              yield payload
+            else
+              result
+            end
+          end
+        end
+
+      end
+
       include Jackal::Cfn::Utils
 
       VALID_RESOURCE_STATUS = ['SUCCESS', 'FAILED']
 
       autoload :HashExtractor, 'jackal-cfn/resource/hash_extractor'
       autoload :AmiManager, 'jackal-cfn/resource/ami_manager'
+
+      # Update validity checks in subclasses
+      #
+      # @param klass [Class]
+      def self.inherited(klass)
+        klass.class_eval do
+          include InheritedValidity
+        end
+      end
+
+      # Determine message validity
+      #
+      # @param message [Carnivore::Message]
+      # @return [TrueClass, FalseClass]
+      def valid?(message)
+        super do |payload|
+          payload[:origin_type] == 'Notification' &&
+            payload[:origin_subject].to_s.downcase.include?('cloudformation custom resource')
+        end
+      end
 
       # Setup the dependency requirements for the callback
       def setup(*_)
@@ -28,10 +71,13 @@ module Jackal
 
       # Generate response hash
       #
-      # @param payload [Hash]
+      # @param cfn_resource [Hash]
+      # @option cfn_resource [String] :logical_resource_id
+      # @option cfn_resource [String] :physical_resource_id
+      # @option cfn_resource [String] :stack_id
+      # @option cfn_resource [String] :request_id
       # @return [Hash] default response content
-      def build_response(payload)
-        args = transform_parameters(payload)
+      def build_response(cfn_resource)
         Smash.new(
           'LogicalResourceId' => args[:logical_resource_id],
           'PhysicalResourceId' => args.fetch(:physical_resource_id, physical_resource_id),
@@ -97,37 +143,21 @@ module Jackal
       def unpack(message)
         begin
           payload = super
-          payload = Smash.new(
-            MultiJson.load(
-              payload.fetch('Body', 'Message', payload)
+          if(payload['Body'])
+            payload = Smash.new(
+              MultiJson.load(
+                payload.fetch('Body', 'Message', payload)
+              )
             )
-          )
-          payload = transform_parameters(payload)
-          payload[:origin_type] = message[:message].get('Body', 'Type')
-          payload[:origin_subject] = message[:message].get('Body', 'Subject')
-          payload[:request_type] = snakecase(payload[:request_type])
+            payload = transform_parameters(payload)
+            payload[:origin_type] = message[:message].get('Body', 'Type')
+            payload[:origin_subject] = message[:message].get('Body', 'Subject')
+            payload[:request_type] = snakecase(payload[:request_type])
+          end
           payload
         rescue MultiJson::ParseError
           # Not our expected format so return empty payload
           Smash.new
-        end
-      end
-
-      # Determine message validity
-      #
-      # @param message [Carnivore::Message]
-      # @return [TrueClass, FalseClass]
-      def valid?(message)
-        super do |payload|
-          resource_type = payload[:resource_type].split('::').last
-          result = payload[:origin_type] == 'Notification' &&
-            payload[:origin_subject].downcase.include?('cloudformation custom resource') &&
-            resource_type == self.class.name.split('::').last
-          if(result && block_given?)
-            yield payload
-          else
-            result
-          end
         end
       end
 
