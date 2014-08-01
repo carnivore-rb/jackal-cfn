@@ -5,6 +5,37 @@ module Jackal
     # Callback for event types
     class Event < Jackal::Callback
 
+      module InheritedValidity
+        # Determine message validity
+        #
+        # @param message [Carnivore::Message]
+        # @return [TrueClass, FalseClass]
+        def valid?(message)
+          super do |payload|
+            data = payload.fetch(:data, :cfn_event, Smash.new)
+            result = data[:origin_type] == 'Notification' &&
+              data[:origin_subject].to_s.downcase.include?('cloudformation notification')
+            if(result && block_given?)
+              yield payload
+            else
+              result
+            end
+          end
+        end
+
+      end
+
+      include Jackal::Cfn::Utils
+
+      # Update validity checks in subclasses
+      #
+      # @param klass [Class]
+      def self.inherited(klass)
+        klass.class_eval do
+          include InheritedValidity
+        end
+      end
+
       # Unpack message and create payload
       #
       # @param message [Carnivore::Message]
