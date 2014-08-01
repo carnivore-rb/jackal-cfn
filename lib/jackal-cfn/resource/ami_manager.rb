@@ -36,29 +36,25 @@ module Jackal
         #
         # @param message [Carnivore::Message]
         def execute(message)
-          payload = unpack(message)
-          parameters = transform_parameters(payload[:resource_properties]['Parameters'])
-          debug "Processing payload: #{payload.inspect}"
-          response = build_response(payload)
-          case payload[:request_type]
-          when :create
-            ami_response_update(response, parameters)
-          when :delete
-            destroy_ami(response, payload, parameters)
-          when :update
-          else
-            error "Unknown request type received: #{payload[:request_type].inspect}"
-            response['Status'] = 'FAILED'
-            response['Reason'] = 'Unknown request type received'
+          failure_wrap do |payload|
+            cfn_resource = rekey_hash(payload.get(:data, :cfn_resource))
+            properties = rekey_hash(cfn_resource[:resource_properties])
+            parameters = rekey_hash(properties[:parameters])
+            cfn_response = build_response(cfn_resource)
+            case cfn_resource[:request_type]
+            when :create
+              ami_response_update(cfn_response, parameters)
+            when :delete
+              destroy_ami(cfn_response, cfn_resource, parameters)
+            when :update
+            else
+              error "Unknown request type received: #{cfn_resource[:request_type].inspect}"
+              response['Status'] = 'FAILED'
+              response['Reason'] = 'Unknown request type received'
+            end
+            respond_to_stack(response, cfn_resource[:response_url])
+            completed(payload, message)
           end
-          respond_to_stack(response, payload[:response_url])
-          completed(
-            new_payload(
-              config.fetch(:name, :ami_manager),
-              :cfn_resource => payload
-            ),
-            message
-          )
         end
 
         # Update the physical resource id to include the ami id
@@ -100,7 +96,13 @@ module Jackal
         # @param region [String] AWS region ami exists
         # @return [Fog::Compute]
         def compute_api(region)
-          Fog::Compute.new({:provider => :aws}.merge(config.fetch(:credentials, :compute, {}).merge(:region => region)))
+          Fog::Compute.new(
+            {:provider => :aws}.merge(
+              config.fetch(
+                :credentials, :compute, {}
+              ).merge(:region => region)
+            )
+          )
         end
 
       end
