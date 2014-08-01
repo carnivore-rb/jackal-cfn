@@ -4,6 +4,8 @@ module Jackal
   module Cfn
     module Utils
 
+      autoload :Fog, 'jackal-cfn/utils/fog'
+
       # Snake case top level keys in hash
       #
       # @param params [Hash]
