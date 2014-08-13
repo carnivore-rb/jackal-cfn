@@ -21,9 +21,11 @@ module Jackal
       # Required configuration:
       #   {
       #     "config": {
-      #       "credentials": {
-      #         "compute": {
-      #           FOG_CREDENTIALS
+      #       "ami": {
+      #         "credentials": {
+      #           "compute": {
+      #             FOG_CREDENTIALS
+      #           }
       #         }
       #       }
       #     }
@@ -98,9 +100,9 @@ module Jackal
         def compute_api(region)
           Fog::Compute.new(
             {:provider => :aws}.merge(
-              config.fetch(
-                :credentials, :compute, {}
-              ).merge(:region => region)
+              config.fetch(:ami, :credentials, :compute).merge(
+                :region => region
+              )
             )
           )
         end
