@@ -45,6 +45,7 @@ module Jackal
         payload = format_event(payload.fetch('Body', 'Message', payload))
         payload[:origin_type] = message[:message].get('Body', 'Type')
         payload[:origin_subject] = message[:message].get('Body', 'Subject')
+        payload.to_smash
       end
 
       # Determine message validity
@@ -70,8 +71,8 @@ module Jackal
       def format_event(evt)
         parts = evt.split("\n").map do |entry|
           chunks = entry.split('=')
-          key = parts.unshift.strip
-          value = parts.join.strip.sub(/^'/, '').sub(/'$/, '').strip
+          key = chunks.shift.strip
+          value = chunks.join.strip.sub(/^'/, '').sub(/'$/, '').strip
           [key, value]
         end
         event = Smash[parts]
@@ -92,13 +93,17 @@ module Jackal
       #
       # @param message [Carnivore::Message]
       def execute(message)
-        failure_wrap do |payload|
-          job_completed(
-            new_payload(
-              config[:name],
-              :cfn_event => payload
-            )
-          )
+        data_payload = unpack(message)
+        payload = new_payload(
+          config[:name],
+          :cfn_event => payload
+        )
+        if(config[:reprocess])
+          my_input = "#{source_prefix}_input"
+          Carnivore::Supervisor.supervisor[my_input].transmit(payload)
+          message.confirm!
+        else
+          completed(payload, message)
         end
       end
 

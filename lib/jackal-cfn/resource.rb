@@ -165,13 +165,17 @@ module Jackal
       #
       # @param message [Carnivore::Message]
       def execute(message)
-        failure_wrap(message) do |payload|
-          job_completed(
-            new_payload(
-              config[:name],
-              :cfn_resource => payload
-            )
-          )
+        data_payload = unpack(message)
+        payload = new_payload(
+          config[:name],
+          :cfn_resource => payload
+        )
+        if(config[:reprocess])
+          my_input = "#{source_prefix}_input"
+          Carnivore::Supervisor.supervisor[my_input].transmit(payload)
+          message.confirm!
+        else
+          completed(payload, message)
         end
       end
 
