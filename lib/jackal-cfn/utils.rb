@@ -5,6 +5,7 @@ module Jackal
     module Utils
 
       autoload :Fog, 'jackal-cfn/utils/fog'
+      autoload :Http, 'jackal-cfn/utils/http'
 
       # Snake case top level keys in hash
       #
