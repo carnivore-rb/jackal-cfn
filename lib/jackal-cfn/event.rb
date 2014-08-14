@@ -26,6 +26,7 @@ module Jackal
       end
 
       include Jackal::Cfn::Utils
+      include Jackal::Cfn::Utils::Http
 
       # Update validity checks in subclasses
       #
@@ -42,10 +43,20 @@ module Jackal
       # @return [Smash]
       def unpack(message)
         payload = super
-        payload = format_event(payload.fetch('Body', 'Message', payload))
-        payload[:origin_type] = message[:message].get('Body', 'Type')
-        payload[:origin_subject] = message[:message].get('Body', 'Subject')
-        payload.to_smash
+        if(self.class == Jackal::Cfn::Event)
+          begin
+            unless(payload.get(:data, :cfn_event))
+              payload = format_event(payload.fetch('Body', 'Message', payload))
+              payload[:origin_type] = message[:message].get('Body', 'Type')
+              payload[:origin_subject] = message[:message].get('Body', 'Subject')
+            end
+            payload
+          rescue
+            Smash.new
+          end
+        else
+          payload.to_smash.fetch('Body', payload.to_smash)
+        end
       end
 
       # Determine message validity
@@ -54,12 +65,11 @@ module Jackal
       # @return [TrueClass, FalseClass]
       def valid?(message)
         super do |payload|
-          result = payload[:origin_type] == 'Notification' &&
-            payload[:origin_subject].downcase.include?('cloudformation notification')
-          if(result && block_given?)
+          if(block_given?)
             yield payload
           else
-            result
+            payload[:origin_type] == 'Notification' &&
+              payload[:origin_subject].downcase.include?('cloudformation notification')
           end
         end
       end
@@ -96,10 +106,11 @@ module Jackal
         data_payload = unpack(message)
         payload = new_payload(
           config[:name],
-          :cfn_event => payload
+          :cfn_event => data_payload
         )
         if(config[:reprocess])
           my_input = "#{source_prefix}_input"
+          debug "Reprocessing payload through current source (#{my_input})"
           Carnivore::Supervisor.supervisor[my_input].transmit(payload)
           message.confirm!
         else

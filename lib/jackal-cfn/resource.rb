@@ -17,7 +17,8 @@ module Jackal
             data = payload.fetch(:data, :cfn_resource, Smash.new)
             resource_type = data[:resource_type].to_s.split('::').last
             result = data[:origin_type] == 'Notification' &&
-              data[:origin_subject].to_s.downcase.include?('cloudformation custom resource')
+              data[:origin_subject].to_s.downcase.include?('cloudformation custom resource') &&
+              self.class.to_s.split('::').last == resource_type
             if(result && block_given?)
               yield payload
             else
@@ -29,11 +30,9 @@ module Jackal
       end
 
       include Jackal::Cfn::Utils
+      include Jackal::Cfn::Utils::Http
 
       VALID_RESOURCE_STATUS = ['SUCCESS', 'FAILED']
-
-      autoload :HashExtractor, 'jackal-cfn/resource/hash_extractor'
-      autoload :AmiManager, 'jackal-cfn/resource/ami_manager'
 
       # Update validity checks in subclasses
       #
@@ -50,8 +49,12 @@ module Jackal
       # @return [TrueClass, FalseClass]
       def valid?(message)
         super do |payload|
-          payload[:origin_type] == 'Notification' &&
-            payload[:origin_subject].to_s.downcase.include?('cloudformation custom resource')
+          if(block_given?)
+            yield payload
+          else
+            payload[:origin_type] == 'Notification' &&
+              payload[:origin_subject].to_s.downcase.include?('cloudformation custom resource')
+          end
         end
       end
 
@@ -66,7 +69,7 @@ module Jackal
       # @note this should be overridden in subclasses when actual
       #   resources are being created
       def physical_resource_id
-        "#{self.class.name}-#{Celluloid.uuid}"
+        "#{self.class.name.split('::').last}-#{Celluloid.uuid}"
       end
 
       # Generate response hash
@@ -79,30 +82,16 @@ module Jackal
       # @return [Hash] default response content
       def build_response(cfn_resource)
         Smash.new(
-          'LogicalResourceId' => args[:logical_resource_id],
-          'PhysicalResourceId' => args.fetch(:physical_resource_id, physical_resource_id),
-          'StackId' => args[:stack_id],
-          'RequestId' => args[:request_id],
+          'LogicalResourceId' => cfn_resource[:logical_resource_id],
+          'PhysicalResourceId' => cfn_resource.fetch(:physical_resource_id, physical_resource_id),
+          'StackId' => cfn_resource[:stack_id],
+          'RequestId' => cfn_resource[:request_id],
           'Status' => 'SUCCESS',
-          'Reason' => 'Not provided',
-          'Data' => Smash.new
+          'Data' => Smash.new(
+            'Reason' => 'None'
+          )
         )
       end
-
-      # Provide remote endpoint session for sending response
-      #
-      # @param host [String] end point host
-      # @param scheme [String] end point scheme
-      # @return [Patron::Session]
-      def response_endpoint(host, scheme)
-        session = Patron::Session.new
-        session.timeout = config.fetch(:response_timeout, 20)
-        session.connect_timeout = config.fetch(:connection_timeout, 10)
-        session.base_url = "#{scheme}://#{host}"
-        session.headers['User-Agent'] = "JackalCfn/#{Jackal::Cfn::VERSION.version}"
-        session
-      end
-      alias_method :http_endpoint, :response_endpoint
 
       # Send response to the waiting stack
       #
@@ -141,23 +130,27 @@ module Jackal
       # @param message [Carnivore::Message]
       # @return [Smash]
       def unpack(message)
-        begin
-          payload = super
-          if(payload['Body'])
-            payload = Smash.new(
-              MultiJson.load(
-                payload.fetch('Body', 'Message', payload)
+        payload = super
+        if(self.class == Jackal::Cfn::Resource)
+          begin
+            if(payload['Body'])
+              payload = Smash.new(
+                MultiJson.load(
+                  payload.fetch('Body', 'Message', payload)
+                )
               )
-            )
-            payload = transform_parameters(payload)
-            payload[:origin_type] = message[:message].get('Body', 'Type')
-            payload[:origin_subject] = message[:message].get('Body', 'Subject')
-            payload[:request_type] = snakecase(payload[:request_type])
+              payload = transform_parameters(payload)
+              payload[:origin_type] = message[:message].get('Body', 'Type')
+              payload[:origin_subject] = message[:message].get('Body', 'Subject')
+              payload[:request_type] = snakecase(payload[:request_type])
+            end
+            payload
+          rescue MultiJson::ParseError
+            # Not our expected format so return empty payload
+            Smash.new
           end
-          payload
-        rescue MultiJson::ParseError
-          # Not our expected format so return empty payload
-          Smash.new
+        else
+          payload.to_smash.fetch('Body', payload.to_smash)
         end
       end
 
@@ -168,7 +161,7 @@ module Jackal
         data_payload = unpack(message)
         payload = new_payload(
           config[:name],
-          :cfn_resource => payload
+          :cfn_resource => data_payload
         )
         if(config[:reprocess])
           my_input = "#{source_prefix}_input"
