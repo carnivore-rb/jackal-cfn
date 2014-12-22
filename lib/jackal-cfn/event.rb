@@ -109,9 +109,8 @@ module Jackal
           :cfn_event => data_payload
         )
         if(config[:reprocess])
-          my_input = "#{source_prefix}_input"
-          debug "Reprocessing payload through current source (#{my_input})"
-          Carnivore::Supervisor.supervisor[my_input].transmit(payload)
+          debug "Reprocessing payload through current source (#{destination(:input)})"
+          Carnivore::Supervisor.supervisor[destination(:input)].transmit(payload)
           message.confirm!
         else
           completed(payload, message)
