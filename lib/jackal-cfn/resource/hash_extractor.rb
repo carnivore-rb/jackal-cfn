@@ -20,7 +20,7 @@ module Jackal
       #
       # @param message [Carnivore::Message]
       def execute(message)
-        failure_wrap do |payload|
+        failure_wrap(message) do |payload|
           cfn_resource = rekey_hash(payload.get(:data, :cfn_resource))
           properties = rekey_hash(cfn_resource[:resource_properties])
           parameters = rekey_hash(properties[:parameters])
@@ -36,7 +36,7 @@ module Jackal
             return_value = MultiJson.dump(return_value)
           end
           cfn_response['Data']['Payload'] = return_value
-          respond_to_stack(cfn_response, payload[:response_url])
+          respond_to_stack(cfn_response, cfn_resource[:response_url])
           job_completed(:jackal_cfn, payload, message)
         end
       end
