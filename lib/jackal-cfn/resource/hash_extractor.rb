@@ -1,7 +1,7 @@
 require 'jackal-cfn'
 
 module Jackal
-  module CfnTools
+  module Cfn
     # Extract value from hash
     #
     # Expected resource:
@@ -37,7 +37,7 @@ module Jackal
           end
           cfn_response['Data']['Payload'] = return_value
           respond_to_stack(cfn_response, payload[:response_url])
-          completed(payload, message)
+          job_completed(:jackal_cfn, payload, message)
         end
       end
 

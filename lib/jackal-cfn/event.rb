@@ -113,7 +113,7 @@ module Jackal
           Carnivore::Supervisor.supervisor[destination(:input)].transmit(payload)
           message.confirm!
         else
-          completed(payload, message)
+          job_completed(:jackal_cfn, payload, message)
         end
       end
 

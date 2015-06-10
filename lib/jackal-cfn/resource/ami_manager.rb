@@ -1,7 +1,7 @@
 require 'jackal-cfn'
 
 module Jackal
-  module CfnTools
+  module Cfn
     # Manage AMI Resources
     #
     # Expected resource:
@@ -54,7 +54,7 @@ module Jackal
             response['Reason'] = 'Unknown request type received'
           end
           respond_to_stack(cfn_response, cfn_resource[:response_url])
-          completed(payload, message)
+          job_completed(:jackal_cfn, payload, message)
         end
       end
 

@@ -25,7 +25,7 @@ module Jackal
       # @param v [String]
       # @return [Symbol]
       def snakecase(v)
-        v.to_s.gsub(/(?<![A-Z])([A-Z])/, '_\1').sub(/^_/, '').downcase.to_sym
+        Bogo::Utility.snake(v)
       end
 
     end
