@@ -37,7 +37,7 @@ module Jackal
       #
       # @param message [Carnivore::Message]
       def execute(message)
-        failure_wrap do |payload|
+        failure_wrap(message) do |payload|
           cfn_resource = rekey_hash(payload.get(:data, :cfn_resource))
           properties = rekey_hash(cfn_resource[:resource_properties])
           parameters = rekey_hash(properties[:parameters])
