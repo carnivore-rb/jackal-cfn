@@ -87,9 +87,7 @@ module Jackal
           'StackId' => cfn_resource[:stack_id],
           'RequestId' => cfn_resource[:request_id],
           'Status' => 'SUCCESS',
-          'Data' => Smash.new(
-            'Reason' => 'None'
-          )
+          'Data' => Smash.new
         )
       end
 
@@ -133,12 +131,8 @@ module Jackal
         payload = super
         if(self.class == Jackal::Cfn::Resource)
           begin
-            if(payload['Body'])
-              payload = Smash.new(
-                MultiJson.load(
-                  payload.fetch('Body', 'Message', payload)
-                )
-              )
+            if(payload['Body'] && payload['Body']['Message'])
+              payload = MultiJson.load(payload.get('Body', 'Message')).to_smash
               payload = transform_parameters(payload)
               payload[:origin_type] = message[:message].get('Body', 'Type')
               payload[:origin_subject] = message[:message].get('Body', 'Subject')
@@ -160,7 +154,7 @@ module Jackal
       def execute(message)
         data_payload = unpack(message)
         payload = new_payload(
-          config[:name],
+          config.fetch(:name, :jackal_cfn),
           :cfn_resource => data_payload
         )
         if(config[:reprocess])
@@ -168,6 +162,25 @@ module Jackal
           message.confirm!
         else
           completed(payload, message)
+        end
+      end
+
+      # Custom wrap to send resource failure
+      #
+      # @param message [Carnivore::Message]
+      def failure_wrap(message)
+        begin
+          payload = unpack(message)
+          yield payload
+        rescue => e
+          error "Unexpected error encountered processing custom resource - #{e.class}: #{e}"
+          debug "#{e.class}: #{e}\n#{e.backtrace.join("\n")}"
+          cfn_resource = payload.get(:data, :cfn_resource)
+          cfn_response = build_response(cfn_resource)
+          cfn_response['Status'] = 'FAILED'
+          cfn_response['Reason'] = "Unexpected error encountered [#{e}]"
+          respond_to_stack(cfn_response, cfn_resource[:response_url])
+          message.confirm!
         end
       end
 
