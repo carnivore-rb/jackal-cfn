@@ -1,3 +1,8 @@
+# v0.2.0
+* Move builtin resources under single namespace
+* Add custom failure wrap to resource to provide auto failure notification
+* Fix endpoint url response in extractor resource
+
 # v0.1.6
 * Isolate event and resource to simple handle format and forward
 * Move builtin custom resources within new module `CfnTools`
