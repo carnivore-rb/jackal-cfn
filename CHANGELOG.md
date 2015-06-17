@@ -1,3 +1,7 @@
+# v0.2.2
+* Fix credentials location in configuration
+* Fix namespacing when access fog constants
+
 # v0.2.0
 * Move builtin resources under single namespace
 * Add custom failure wrap to resource to provide auto failure notification
