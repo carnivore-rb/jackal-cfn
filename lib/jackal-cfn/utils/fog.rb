@@ -14,7 +14,7 @@ module Jackal
         # @return [Fog::Service]
         # @note extracts credentials from confg at :api -> [type | :default]
         def api_for(type)
-          klass = Fog.constants.detect do |const|
+          klass = ::Fog.constants.detect do |const|
             snakecase(const).to_s == type.to_s
           end
           if(klass)
@@ -27,7 +27,7 @@ module Jackal
               key = credentials.to_a.flatten.push(klass).sort.hash
               Thread.current[:cfn_apis] ||= Smash.new
               unless(Thread.current[:cfn_apis][key])
-                Thread.current[:cfn_apis][key] = Fog.const_get(klass).new(credentials)
+                Thread.current[:cfn_apis][key] = ::Fog.const_get(klass).new(credentials)
               end
               Thread.current[:cfn_apis][key]
             else
@@ -52,7 +52,7 @@ module Jackal
             [var, api.instance_variable_get(var)]
           end.flatten.compact.map(&:to_s).push(api.service_name).sort.hash
           if(Thread.current[:cfn_assume_apis].get(key, :expires).to_i < Time.now.to_i + 5)
-            sts = Fog::AWS::STS.new(
+            sts = ::Fog::AWS::STS.new(
               config.fetch(
                 :api, :sts, config.get(
                   :api, :default
