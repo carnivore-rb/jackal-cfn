@@ -86,8 +86,11 @@ module Jackal
         ami_id = payload[:physical_resource_id].split(PHYSICAL_ID_JOINER).last
         begin
           compute_api(parameters[:region]).deregister_image(ami_id)
+        rescue ::Fog::Compute::AWS::Error => e
+          warn "Failed to remove AMI: #{e.class}: #{e}"
+          response['Reason'] = "Failed to remove AMI resource: #{e}. Ignoring."
         rescue => e
-          error "Failed to remove AMI: #{e.class}: #{e}"
+          error "Unexpected error removing AMI: #{e.class}: #{e}"
           response['Status'] = 'FAILED'
           response['Reason'] = e.message
         end
@@ -101,7 +104,7 @@ module Jackal
       def compute_api(region)
         ::Fog::Compute.new(
           {:provider => :aws}.merge(
-            config.fetch(:ami, :credentials, :compute).merge(
+            config.get(:ami, :credentials, :compute).merge(
               :region => region
             )
           )
