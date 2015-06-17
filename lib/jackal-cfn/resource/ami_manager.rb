@@ -33,6 +33,11 @@ module Jackal
 
       PHYSICAL_ID_JOINER = '__-__'
 
+      # Ensure fog library is loaded
+      def setup(*_)
+        require 'fog'
+      end
+
       # Process message, send value back to CFN
       #
       # @param message [Carnivore::Message]
@@ -42,7 +47,7 @@ module Jackal
           properties = rekey_hash(cfn_resource[:resource_properties])
           parameters = rekey_hash(properties[:parameters])
           cfn_response = build_response(cfn_resource)
-          case cfn_resource[:request_type]
+          case cfn_resource[:request_type].to_sym
           when :create
             ami_response_update(cfn_response, parameters)
           when :delete
@@ -50,8 +55,8 @@ module Jackal
           when :update
           else
             error "Unknown request type received: #{cfn_resource[:request_type].inspect}"
-            response['Status'] = 'FAILED'
-            response['Reason'] = 'Unknown request type received'
+            cfn_response['Status'] = 'FAILED'
+            cfn_response['Reason'] = 'Unknown request type received'
           end
           respond_to_stack(cfn_response, cfn_resource[:response_url])
           job_completed(:jackal_cfn, payload, message)
@@ -81,9 +86,6 @@ module Jackal
         ami_id = payload[:physical_resource_id].split(PHYSICAL_ID_JOINER).last
         begin
           compute_api(parameters[:region]).deregister_image(ami_id)
-        rescue Fog::Compute::AWS::Error => e
-          warn "Non-fatal error encountered on AMI removal: #{e.class}: #{e}"
-          response['Reason'] = e.message
         rescue => e
           error "Failed to remove AMI: #{e.class}: #{e}"
           response['Status'] = 'FAILED'
@@ -97,7 +99,7 @@ module Jackal
       # @param region [String] AWS region ami exists
       # @return [Fog::Compute]
       def compute_api(region)
-        Fog::Compute.new(
+        ::Fog::Compute.new(
           {:provider => :aws}.merge(
             config.fetch(:ami, :credentials, :compute).merge(
               :region => region
