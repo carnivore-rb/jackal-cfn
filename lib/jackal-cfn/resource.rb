@@ -129,7 +129,7 @@ module Jackal
       # @return [Smash]
       def unpack(message)
         payload = super
-        if(self.class == Jackal::Cfn::Resource)
+        if(self.is_a?(Jackal::Cfn::Resource))
           begin
             if(payload['Body'] && payload['Body']['Message'])
               payload = MultiJson.load(payload.get('Body', 'Message')).to_smash
@@ -137,14 +137,16 @@ module Jackal
               payload[:origin_type] = message[:message].get('Body', 'Type')
               payload[:origin_subject] = message[:message].get('Body', 'Subject')
               payload[:request_type] = snakecase(payload[:request_type])
+              payload
+            else
+              payload.to_smash.fetch('Attributes', 'Body', payload.to_smash.fetch('Body', payload.to_smash))
             end
-            payload
           rescue MultiJson::ParseError
             # Not our expected format so return empty payload
             Smash.new
           end
         else
-          payload.to_smash.fetch('Body', payload.to_smash)
+          payload.to_smash.fetch('Attributes', 'Body', payload.to_smash.fetch('Body', payload.to_smash))
         end
       end
 
@@ -158,7 +160,7 @@ module Jackal
           :cfn_resource => data_payload
         )
         if(config[:reprocess])
-          Carnivore::Supervisor.supervisor[destination(:input)].transmit(payload)
+          Carnivore::Supervisor.supervisor[destination(:input, payload)].transmit(payload)
           message.confirm!
         else
           completed(payload, message)
