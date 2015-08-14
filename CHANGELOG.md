@@ -1,3 +1,7 @@
+# v0.2.4
+* Add AmiRegister callback
+* Update initial payload handling
+
 # v0.2.2
 * Fix credentials location in configuration
 * Fix namespacing when access fog constants
