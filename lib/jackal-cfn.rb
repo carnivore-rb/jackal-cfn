@@ -11,5 +11,6 @@ module Jackal
     # Provided custom resources
     autoload :HashExtractor, 'jackal-cfn/resource/hash_extractor'
     autoload :AmiManager, 'jackal-cfn/resource/ami_manager'
+    autoload :AmiRegister, 'jackal-cfn/resource/ami_register'
   end
 end
