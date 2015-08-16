@@ -1,3 +1,6 @@
+# v0.2.6
+* Fix event re-processing (destination generation)
+
 # v0.2.4
 * Add AmiRegister callback
 * Update initial payload handling
