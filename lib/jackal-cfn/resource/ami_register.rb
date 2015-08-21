@@ -59,21 +59,13 @@ module Jackal
           case cfn_resource[:request_type].to_sym
           when :create
             generate_ami(cfn_response, parameters)
-            unless(cfn_response['Status'] == 'FAILED')
-              if(parameters[:halt_instance].to_s == 'true')
-                halt_ec2_instance(parameters)
-              end
-            end
             poll_for_available = true
           when :update
             destroy_ami(cfn_response, cfn_resource, parameters)
             unless(cfn_response['Status'] == 'FAILED')
               generate_ami(cfn_response, parameters)
-              if(parameters[:halt_instance].to_s == 'true')
-                halt_ec2_instance(parameters)
-              end
+              poll_for_available = true
             end
-            poll_for_available = true
           when :delete
             destroy_ami(cfn_response, cfn_resource, parameters)
           else
@@ -86,6 +78,10 @@ module Jackal
             if(result != 'available')
               cfn_response['Status'] = 'FAILED'
               cfn_response['Reason'] = "Registered AMI resulted in FAILED state #{cfn_response['Data']['AmiId']}"
+            else
+              if(parameters[:halt_instance].to_s == 'true')
+                halt_ec2_instance(parameters)
+              end
             end
           end
           respond_to_stack(cfn_response, cfn_resource[:response_url])
