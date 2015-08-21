@@ -1,3 +1,6 @@
+# v0.2.8
+* Fix optional instance halt to wait for ami AVAILABLE state
+
 # v0.2.6
 * Fix event re-processing (destination generation)
 
