@@ -11,6 +11,7 @@ Gem::Specification.new do |s|
   s.require_path = 'lib'
   s.license = 'Apache 2.0'
   s.add_dependency 'jackal'
+  s.add_dependency 'miasma'
   s.add_dependency 'patron'
   s.files = Dir['lib/**/*'] + %w(jackal-cfn.gemspec README.md CHANGELOG.md CONTRIBUTING.md LICENSE)
 end
