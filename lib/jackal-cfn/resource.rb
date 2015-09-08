@@ -175,12 +175,12 @@ module Jackal
           payload = unpack(message)
           yield payload
         rescue => e
-          error "Unexpected error encountered processing custom resource - #{e.class}: #{e}"
+          error "Unexpected error encountered processing custom resource - #{e.class}: #{e.message}"
           debug "#{e.class}: #{e}\n#{e.backtrace.join("\n")}"
           cfn_resource = payload.get(:data, :cfn_resource)
           cfn_response = build_response(cfn_resource)
           cfn_response['Status'] = 'FAILED'
-          cfn_response['Reason'] = "Unexpected error encountered [#{e}]"
+          cfn_response['Reason'] = "Unexpected error encountered [#{e.message}]"
           respond_to_stack(cfn_response, cfn_resource[:response_url])
           message.confirm!
         end
