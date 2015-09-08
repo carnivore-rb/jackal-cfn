@@ -1,3 +1,7 @@
+# v0.2.10
+* Properly handle no parameters in properties
+* Add new JackalStack resource
+
 # v0.2.8
 * Fix optional instance halt to wait for ami AVAILABLE state
 
