@@ -10,7 +10,7 @@ module Jackal
     #     "Properties": {
     #       "Parameters": {
     #         "Key": "path.to.value.in.hash",
-    #         "Value": Hash_or_JSON_string
+    #         "Value": JSON
     #       }
     #     }
     #   }

@@ -9,9 +9,7 @@ module Jackal
     #     "Type": "Custom::AmiManager",
     #     "Properties": {
     #       "Parameters": {
-    #         "InstanceId": "",
     #         "AmiId": "",
-    #         "Action": "",
     #         "Region": ""
     #       }
     #     }
