@@ -1,6 +1,6 @@
 module Jackal
   module Cfn
     # Current version
-    VERSION = Gem::Version.new('0.2.10')
+    VERSION = Gem::Version.new('0.2.11')
   end
 end
