@@ -118,6 +118,7 @@ module Jackal
     end
   end
 end
+```
 
 This will match `Custom::LocalPrinter` resource requests that are received. It
 will print information into the log about the request and then send a successful
