@@ -59,7 +59,7 @@ module Jackal
                 )
               )
             )
-            result = sts.assume_role("jackal-cfn-#{Celluloid.uuid}", role).body
+            result = sts.assume_role("jackal-cfn-#{Carnivore.uuid}", role).body
             Thread.current[:cfn_assume_apis][key] = Smash.new(
               :expires => Time.parse(result['Expiration']).to_i,
               :api => api.class.new(

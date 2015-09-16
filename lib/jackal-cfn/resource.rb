@@ -69,7 +69,7 @@ module Jackal
       # @note this should be overridden in subclasses when actual
       #   resources are being created
       def physical_resource_id
-        "#{self.class.name.split('::').last}-#{Celluloid.uuid}"
+        "#{self.class.name.split('::').last}-#{Carnivore.uuid}"
       end
 
       # Generate response hash
