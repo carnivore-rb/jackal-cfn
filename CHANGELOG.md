@@ -1,3 +1,7 @@
+# v0.2.12
+* Update joiner used for physical resource ID in JackalStack
+* Support stack delete when create is incomplete
+
 # v0.2.10
 * Properly handle no parameters in properties
 * Add new JackalStack resource
