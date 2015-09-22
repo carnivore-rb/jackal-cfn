@@ -34,6 +34,8 @@ module Jackal
     #   }
     class JackalStack < Jackal::Cfn::Resource
 
+      LOCATION_JOINER = '__~__'
+
       # Load miasma for stack building
       def setup(*_)
         require 'miasma'
@@ -114,6 +116,18 @@ module Jackal
         )
       end
 
+      # Generate the remote stack name via the resource information
+      #
+      # @param resource [Hash]
+      # @return [String]
+      def generate_stack_name(resource)
+        [
+          'JackalStack',
+          resource[:logical_resource_id],
+          resource[:stack_id].split('/').last
+        ].join('-')
+      end
+
       # Create a new stack and update the response values
       #
       # @param response [Hash] response data of action
@@ -124,11 +138,7 @@ module Jackal
       # @return [TrueClass, FalseClass]
       def create_stack(response, resource, properties, parameters, message)
         stack = remote_api(properties[:location]).stacks.build(
-          :name => [
-            'JackalStack',
-            resource[:logical_resource_id],
-            resource[:stack_id].split('/').last
-          ].join('-'),
+          :name => generate_stack_name(resource),
           :template => properties.fetch(:stack, fetch_template(properties[:template_url])),
           :parameters => Hash[parameters.map{|k,v| [Bogo::Utility.camel(k), v] }]
         )
@@ -143,7 +153,10 @@ module Jackal
           stack.outputs.each do |output|
             response['Data']["Outputs.#{output.key}"] = output.value
           end
-          response['PhysicalResourceId'] = "#{properties[:location]}-#{stack.id}"
+          response['PhysicalResourceId'] = [
+            properties[:location],
+            stack.id
+          ].join(LOCATION_JOINER)
           true
         else
           response['Status'] = 'FAILED'
@@ -207,6 +220,15 @@ module Jackal
       # @param message [Carnivore::Message] original message
       def destroy_stack(response, resource, message)
         stack = request_destroy(resource[:physical_resource_id])
+        unless(stack)
+          properties = rekey_hash(cfn_resource[:resource_properties])
+          stack = request_destroy(
+            [
+              properties[:location],
+              generate_stack_name(resource)
+            ].join(LOCATION_JOINER)
+          )
+        end
         if(stack)
           until(stack.state.nil? || stack.state.to_s.end_with?('complete') || stack.state.to_s.end_with?('failed'))
             info "Waiting for stack destruction (#{stack.name})..."
@@ -226,7 +248,7 @@ module Jackal
       # @param stack_resource_id [String] physical resource ID
       # @return [Miasma::Models::Orchestration::Stack, FalseClass]
       def request_destroy(stack_resource_id)
-        location, stack_id = stack_resource_id.split('-', 2)
+        location, stack_id = stack_resource_id.split(LOCATION_JOINER, 2)
         if(stack_id)
           begin
             info "Sending stack destruction request to: #{stack_id} in: #{location}"
