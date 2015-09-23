@@ -1,3 +1,6 @@
+# v0.2.14
+* [fix] Update variable name used in stack resource name construction
+
 # v0.2.12
 * Update joiner used for physical resource ID in JackalStack
 * Support stack delete when create is incomplete
