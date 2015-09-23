@@ -221,7 +221,7 @@ module Jackal
       def destroy_stack(response, resource, message)
         stack = request_destroy(resource[:physical_resource_id])
         unless(stack)
-          properties = rekey_hash(cfn_resource[:resource_properties])
+          properties = rekey_hash(resource[:resource_properties])
           stack = request_destroy(
             [
               properties[:location],
