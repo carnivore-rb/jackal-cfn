@@ -15,7 +15,10 @@ module Jackal
     #         "NoReboot": Boolean,
     #         "BlockDeviceMappings": Array,
     #         "HaltInstance": Boolean,
-    #         "Region": String
+    #         "Region": String,
+    #         "Register" : {
+    #           REGISTER_OPTIONS
+    #         }
     #       }
     #     }
     #   }
@@ -149,7 +152,28 @@ module Jackal
             parameters[:no_reboot],
             :block_device_mappings => parameters.fetch(:block_device_mappings, [])
           )
-          info "New AMI registered: #{result.body['imageId']}"
+          info "New AMI created: #{result.body['imageId']}"
+          if(parameters[:register])
+            register_parameters = Hash[
+              parameters[:register].map do |k,v|
+                [Bogo::Utility.camel(k), v]
+              end
+            ]
+            image_info = compute_api(parameters[:region]).describe_images('ImageId' => result.body['imageId']).body['imagesSet'].first
+            register_result = compute_api(parameters[:region]).register_image(
+              image_info['rootDeviceName'],
+              image_info['blockDeviceMapping'],
+              {
+                'Architecture' => image_info['architecture'],
+                'VirtualziationType' => image_info['virtualizationType'],
+              }.merge(register_parameters)
+            )
+            unless(result.body['imageId'] == register_result.body['imageId'])
+              info "New AMI registered: #{register_result.body['imageId']} - Destroying created image: #{result.body['imageId']}"
+              compute_api(parameters[:region]).deregister_image(result.body['imageId'])
+            end
+            result = register_result
+          end
           response['Data']['AmiId'] = result.body['imageId']
           response['PhysicalResourceId'] = [
             physical_resource_id,
