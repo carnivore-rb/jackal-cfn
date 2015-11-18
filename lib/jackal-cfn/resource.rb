@@ -160,6 +160,7 @@ module Jackal
           :cfn_resource => data_payload
         )
         if(config[:reprocess])
+          debug "Reprocessing received message! #{payload}"
           Carnivore::Supervisor.supervisor[destination(:input, payload)].transmit(payload)
           message.confirm!
         else
