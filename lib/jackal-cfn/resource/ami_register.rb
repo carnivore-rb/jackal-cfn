@@ -61,12 +61,12 @@ module Jackal
           poll_for_available = false
           case cfn_resource[:request_type].to_sym
           when :create
-            generate_ami(cfn_response, parameters)
+            generate_ami(message, cfn_response, parameters)
             poll_for_available = true
           when :update
             destroy_ami(cfn_response, cfn_resource, parameters)
             unless(cfn_response['Status'] == 'FAILED')
-              generate_ami(cfn_response, parameters)
+              generate_ami(message, cfn_response, parameters)
               poll_for_available = true
             end
           when :delete
@@ -102,6 +102,7 @@ module Jackal
       def poll_ami_available(message, region, ami_id)
         available = false
         pause_interval = config.fetch(:ami_register_interval, 5).to_i
+
         if(ami_id)
           until(available)
             debug "Pausing for AMI to become available: #{ami_id} (wait time: #{pause_interval})"
@@ -140,10 +141,11 @@ module Jackal
 
       # Create new AMI using provided EC2 instance
       #
+      # @param message [Carnivore::Message]
       # @param response [Hash] cfn response
       # @param parameters [Hash] resource parameters
       # @return [Hash] updated response hash
-      def generate_ami(response, parameters)
+      def generate_ami(message, response, parameters)
         begin
           result = compute_api(parameters[:region]).create_image(
             parameters[:instance_id],
@@ -154,6 +156,7 @@ module Jackal
           )
           info "New AMI created: #{result.body['imageId']}"
           if(parameters[:register])
+            poll_ami_available(message, parameters[:region], result.body['imageId'])
             register_parameters = Hash[
               parameters[:register].map do |k,v|
                 [Bogo::Utility.camel(k), v]
@@ -161,11 +164,15 @@ module Jackal
             ]
             image_info = compute_api(parameters[:region]).describe_images('ImageId' => result.body['imageId']).body['imagesSet'].first
             register_result = compute_api(parameters[:region]).register_image(
+              "#{image_info['name']}-reregister",
+              "Re-register of AMI #{result.body['imageId']} for #{image_info['name']}",
               image_info['rootDeviceName'],
-              image_info['blockDeviceMapping'],
+              image_info['blockDeviceMapping'].map{|i|
+                Hash[i.map{|k,v|[Bogo::Utility.camel(k), v]}]
+              },
               {
                 'Architecture' => image_info['architecture'],
-                'VirtualziationType' => image_info['virtualizationType'],
+                'VirtualizationType' => image_info['virtualizationType'],
               }.merge(register_parameters)
             )
             unless(result.body['imageId'] == register_result.body['imageId'])
