@@ -1,3 +1,7 @@
+# v0.2.16
+* [feature] Allow image re-registration when options provided
+* [enhancement] Add resource scrubber helper
+
 # v0.2.14
 * [fix] Update variable name used in stack resource name construction
 
