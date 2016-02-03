@@ -1,3 +1,6 @@
+# v0.2.18
+* [feature] Add OrchestrationUnit resource
+
 # v0.2.16
 * [feature] Allow image re-registration when options provided
 * [enhancement] Add resource scrubber helper
