@@ -316,6 +316,77 @@ Configuration:
 }
 ```
 
+#### `Jackal::Cfn::OrchestrationUnit`
+
+This resource provides a custom "orchestration unit". The "orchestration unit" consists
+of a piece of code. It is similar to the `AWS::Lambda::Function` resource but is more
+freeform. The command to be executed can be provided as an inline string, or as a remote
+URL to a compressed zip file containing a `run.sh` file to execute. If the return value
+is JSON, the values will be accessible using the `Fn::GetAtt` intrinsic function on the
+resource.
+
+Resource Usage:
+
+```json
+{
+  "Type": "Custom::OrchestrationUnit",
+  "Properties": {
+    "Exec": "STRING_COMMAND",
+    "ExecZip": "REMOTE_URL_TO_ZIP",
+    "Env": {
+      "CUSTOM_ENV_VARS": "FOR_COMMAND"
+    },
+    "OnCreate": {
+      "Exec": "STRING_COMMAND",
+      "ExecZip": "REMOTE_URL_TO_ZIP",
+      "Env": {
+        "CUSTOM_ENV_VARS": "FOR_COMMAND"
+      }
+    },
+    "OnUpdate": {
+      "Exec": "STRING_COMMAND",
+      "ExecZip": "REMOTE_URL_TO_ZIP",
+      "Env": {
+        "CUSTOM_ENV_VARS": "FOR_COMMAND"
+      }
+    },
+    "OnDelete": {
+      "Exec": "STRING_COMMAND",
+      "ExecZip": "REMOTE_URL_TO_ZIP",
+      "Env": {
+        "CUSTOM_ENV_VARS": "FOR_COMMAND"
+      }
+    },
+
+  }
+}
+```
+
+The `Exec` inline string command has precedence over the `ExecZip` if both are provided. The
+root `Exec` or `ExecZip` are the default commands to be run on _any action_. Customized
+commands per action can be provided using the `OnCreate`, `OnUpdate`, or `OnDelete` properties.
+Environment variables defined in the root properties will be merged with environment variables
+defined for explicit action commands.
+
+Resource response:
+
+If command result is a non-JSON value:
+
+```json
+{
+  "OrchestrationUnitValue": "RESULT_OF_COMMAND"
+}
+```
+
+If the result of the command is a JSON value (for example `{"MyKey": "MyValue"}`):
+
+```json
+{
+  "MyKey": "MyValue",
+  "OrchestrationUnitValue": "{\"MyKey\": \"MyValue\"}"
+}
+```
+
 ## Info
 
 * Repository: https://github.com/carnviore-rb/jackal-cfn
