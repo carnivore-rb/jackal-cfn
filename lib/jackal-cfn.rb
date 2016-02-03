@@ -13,6 +13,7 @@ module Jackal
     autoload :AmiManager, 'jackal-cfn/resource/ami_manager'
     autoload :AmiRegister, 'jackal-cfn/resource/ami_register'
     autoload :JackalStack, 'jackal-cfn/resource/jackal_stack'
+    autoload :OrchestrationUnit, 'jackal-cfn/resource/orchestration_unit'
     autoload :Scrubber, 'jackal-cfn/resource/scrubber'
   end
 end
