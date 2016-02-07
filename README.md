@@ -336,28 +336,31 @@ Resource Usage:
     "Env": {
       "CUSTOM_ENV_VARS": "FOR_COMMAND"
     },
+    "RawResult": true,
     "OnCreate": {
       "Exec": "STRING_COMMAND",
       "ExecZip": "REMOTE_URL_TO_ZIP",
       "Env": {
         "CUSTOM_ENV_VARS": "FOR_COMMAND"
-      }
+      },
+      "RawResult": true
     },
     "OnUpdate": {
       "Exec": "STRING_COMMAND",
       "ExecZip": "REMOTE_URL_TO_ZIP",
       "Env": {
         "CUSTOM_ENV_VARS": "FOR_COMMAND"
-      }
+      },
+      "RawResult": true
     },
     "OnDelete": {
       "Exec": "STRING_COMMAND",
       "ExecZip": "REMOTE_URL_TO_ZIP",
       "Env": {
         "CUSTOM_ENV_VARS": "FOR_COMMAND"
-      }
-    },
-
+      },
+      "RawResult": true
+    }
   }
 }
 ```
@@ -374,7 +377,7 @@ If command result is a non-JSON value:
 
 ```json
 {
-  "OrchestrationUnitValue": "RESULT_OF_COMMAND"
+  "OrchestrationUnitResult": "RESULT_OF_COMMAND"
 }
 ```
 
@@ -383,7 +386,7 @@ If the result of the command is a JSON value (for example `{"MyKey": "MyValue"}`
 ```json
 {
   "MyKey": "MyValue",
-  "OrchestrationUnitValue": "{\"MyKey\": \"MyValue\"}"
+  "OrchestrationUnitResult": "{\"MyKey\": \"MyValue\"}"
 }
 ```
 
