@@ -12,30 +12,37 @@ module Jackal
     #         "OnCreate": {
     #           "Exec": "SHELL_COMMAND",
     #           "ExecZip": "DOWNLOAD_URI",
+    #           "RawResult": true,
     #           "Env": {
     #           }
     #         },
     #         "OnUpdate": {
     #           "Exec": "SHELL_COMMAND",
     #           "ExecZip": "DOWNLOAD_URI",
+    #           "RawResult": true,
     #           "Env": {
     #           }
     #         },
     #         "OnDelete": {
     #           "Exec": "SHELL_COMMAND",
     #           "ExecZip": "DOWNLOAD_URI",
+    #           "RawResult": true,
     #           "Env": {
     #           }
     #         },
     #         "Exec": "SHELL_COMMAND",
     #         "ExecZip": "DOWNLOAD_URI",
     #         "Env": {
-    #         }
+    #         },
+    #         "RawResult": true
     #       }
     #     }
     #   }
     #
     class OrchestrationUnit < Jackal::Cfn::Resource
+
+      # Max result size
+      MAX_RESULT_SIZE = 4096
 
       # Execute orchestration unit
       #
@@ -124,11 +131,13 @@ module Jackal
             result[:stop_time] = Time.now.to_i
             result[:exit_code] = process.exit_code
             stdout.rewind
-            # TODO: size check
-            result[:content] = stdout.read
+            if(stdout.size > MAX_RESULT_SIZE)
+              warn "Command result greater than allowed size: #{stdout.size} > #{MAX_RESULT_SIZE}"
+            end
+            result[:content] = stdout.readpartial(0, MAX_RESULT_SIZE)
             if(process.exit_code != 0)
               stderr.rewind
-              result[:error_message] = stderr.read
+              result[:error_message] = stderr.readpartial(0, MAX_RESULT_SIZE)
             end
           end
           if(result[:exit_code] == 0)
@@ -136,6 +145,9 @@ module Jackal
             begin
               j_result = MultiJson.load(result[:content])
               response['Data'] = j_result.merge(response['Data'])
+              unless(unit[:raw_result])
+                response['Data'].delete('OrchestrationUnitResult')
+              end
             rescue MultiJson::ParseError => e
               debug 'Command result not JSON data'
             end
@@ -158,7 +170,7 @@ module Jackal
         base_key = "on_#{request_type.to_s.downcase}"
         result = Smash.new
         if(direct_unit = parameters[base_key])
-          [:exec, :exec_zip, :env].each do |p_key|
+          [:exec, :exec_zip, :env, :raw_result].each do |p_key|
             if(direct_unit[p_key])
               result[p_key] = direct[p_key]
             end
@@ -177,6 +189,9 @@ module Jackal
           else
             result[:env] = parameters[:env]
           end
+        end
+        unless(result.key?('raw_result'))
+          result[:raw_result] = parameters.fetch('raw_result', true)
         end
         result[:env] ||= Smash.new
         result[:env]['CFN_REQUEST_TYPE'] = request_type.to_s.upcase
