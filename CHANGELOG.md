@@ -1,3 +1,6 @@
+# v0.2.20
+* [enhancement] Allow raw result removal from OrchestrationUnit resource
+
 # v0.2.18
 * [feature] Add OrchestrationUnit resource
 
