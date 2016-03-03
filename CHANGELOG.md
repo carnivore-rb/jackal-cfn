@@ -1,3 +1,6 @@
+# v0.2.22
+* [enhancement] Allow OrchestrationUnit Exec property to contain list of commands
+
 # v0.2.20
 * [enhancement] Allow raw result removal from OrchestrationUnit resource
 
