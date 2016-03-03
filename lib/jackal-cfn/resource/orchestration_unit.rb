@@ -110,35 +110,39 @@ module Jackal
         end
         if(unit[:exec])
           result = Smash.new
-          process_manager.process(unit.hash, unit[:exec]) do |process|
-            stdout = process_manager.create_io_tmp(Carnivore.uuid, 'stdout')
-            stderr = process_manager.create_io_tmp(Carnivore.uuid, 'stderr')
-            process.io.stdout = stdout
-            process.io.stderr = stderr
-            process.cwd = working_directory
-            if(unit[:env])
-              process.environment.replace(unit[:env])
+          stdout = process_manager.create_io_tmp(Carnivore.uuid, 'stdout')
+          stderr = process_manager.create_io_tmp(Carnivore.uuid, 'stderr')
+          result[:start_time] = Time.now.to_i
+          [unit[:exec]].flatten.each do |exec_command|
+            process_manager.process(unit.hash, exec_command) do |process|
+              process.io.stdout = stdout
+              process.io.stderr = stderr
+              process.cwd = working_directory
+              if(unit[:env])
+                process.environment.replace(unit[:env])
+              end
+              process.leader = true
+              process.start
+              begin
+                process.poll_for_exit(config.fetch(:max_execution_time, 60))
+                result[:exit_code] = process.exit_code
+                break if result[:exit_code] != 0
+              rescue ChildProcess::TimeoutError
+                process.stop
+                result[:timed_out] = true
+                result[:exit_code] = process.exit_code
+              end
             end
-            process.leader = true
-            result[:start_time] = Time.now.to_i
-            process.start
-            begin
-              process.poll_for_exit(config.fetch(:max_execution_time, 60))
-            rescue ChildProcess::TimeoutError
-              process.stop
-              result[:timed_out] = true
-            end
-            result[:stop_time] = Time.now.to_i
-            result[:exit_code] = process.exit_code
-            stdout.rewind
-            if(stdout.size > MAX_RESULT_SIZE)
-              warn "Command result greater than allowed size: #{stdout.size} > #{MAX_RESULT_SIZE}"
-            end
-            result[:content] = stdout.readpartial(0, MAX_RESULT_SIZE)
-            if(process.exit_code != 0)
-              stderr.rewind
-              result[:error_message] = stderr.readpartial(0, MAX_RESULT_SIZE)
-            end
+          end
+          result[:stop_time] = Time.now.to_i
+          stdout.rewind
+          if(stdout.size > MAX_RESULT_SIZE)
+            warn "Command result greater than allowed size: #{stdout.size} > #{MAX_RESULT_SIZE}"
+          end
+          result[:content] = stdout.readpartial(0, MAX_RESULT_SIZE)
+          if(result[:exit_code] != 0)
+            stderr.rewind
+            result[:error_message] = stderr.readpartial(0, MAX_RESULT_SIZE)
           end
           if(result[:exit_code] == 0)
             response['Data']['OrchestrationUnitResult'] = result[:content]
