@@ -131,8 +131,8 @@ module Jackal
         payload = super
         if(self.is_a?(Jackal::Cfn::Resource))
           begin
-            if(payload['Body'] && payload['Body']['Message'])
-              payload = MultiJson.load(payload.get('Body', 'Message')).to_smash
+            if(payload['Message'])
+              payload = MultiJson.load(payload['Message']).to_smash
               payload = transform_parameters(payload)
               payload[:origin_type] = message[:message].get('Body', 'Type')
               payload[:origin_subject] = message[:message].get('Body', 'Subject')
