@@ -1,3 +1,6 @@
+# v0.2.24
+* [fix] Account for pre-unpacked body in payload
+
 # v0.2.22
 * [enhancement] Allow OrchestrationUnit Exec property to contain list of commands
 
