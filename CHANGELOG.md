@@ -1,3 +1,7 @@
+# v0.2.26
+* [fix] Update readpartial usage in OrchestrationUnit
+* [enhancement] Add debug output to OrchestrationUnit execution
+
 # v0.2.24
 * [fix] Account for pre-unpacked body in payload
 
