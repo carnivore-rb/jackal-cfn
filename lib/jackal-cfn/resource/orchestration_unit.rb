@@ -106,19 +106,23 @@ module Jackal
       # @return [Hash] CFN response
       def run_unit(unit, working_directory, response)
         if(unit[:exec_zip])
+          debug "Unit provided is compressed zip: #{unit[:exec_zip]}"
           fetch_and_unpack_exec(unit, working_directory)
         end
         if(unit[:exec])
+          debug "Unit to execute: #{unit[:exec]}"
           result = Smash.new
           stdout = process_manager.create_io_tmp(Carnivore.uuid, 'stdout')
           stderr = process_manager.create_io_tmp(Carnivore.uuid, 'stderr')
           result[:start_time] = Time.now.to_i
           [unit[:exec]].flatten.each do |exec_command|
+            debug "Command to execute: #{exec_command}"
             process_manager.process(unit.hash, exec_command) do |process|
               process.io.stdout = stdout
               process.io.stderr = stderr
               process.cwd = working_directory
               if(unit[:env])
+                debug "Custom environment defined: #{unit[:env]}"
                 process.environment.replace(unit[:env])
               end
               process.leader = true
@@ -127,6 +131,7 @@ module Jackal
                 process.poll_for_exit(config.fetch(:max_execution_time, 60))
                 result[:exit_code] = process.exit_code
                 break if result[:exit_code] != 0
+                debug "Execution of command successful - #{exec_command}"
               rescue ChildProcess::TimeoutError
                 process.stop
                 result[:timed_out] = true
@@ -141,8 +146,13 @@ module Jackal
           end
           result[:content] = stdout.readpartial(MAX_RESULT_SIZE)
           if(result[:exit_code] != 0)
+            debug "Execution of unit failed - #{unit}"
             stderr.rewind
             result[:error_message] = stderr.readpartial(MAX_RESULT_SIZE)
+            stderr.rewind
+            stdout.rewind
+            debug "Failed unit STDOUT: #{stdout.read}"
+            debug "Failed unit STDERR: #{stderr.read}"
           end
           if(result[:exit_code] == 0)
             response['Data']['OrchestrationUnitResult'] = result[:content]
