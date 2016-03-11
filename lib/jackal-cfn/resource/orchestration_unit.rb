@@ -139,10 +139,10 @@ module Jackal
           if(stdout.size > MAX_RESULT_SIZE)
             warn "Command result greater than allowed size: #{stdout.size} > #{MAX_RESULT_SIZE}"
           end
-          result[:content] = stdout.readpartial(0, MAX_RESULT_SIZE)
+          result[:content] = stdout.readpartial(MAX_RESULT_SIZE)
           if(result[:exit_code] != 0)
             stderr.rewind
-            result[:error_message] = stderr.readpartial(0, MAX_RESULT_SIZE)
+            result[:error_message] = stderr.readpartial(MAX_RESULT_SIZE)
           end
           if(result[:exit_code] == 0)
             response['Data']['OrchestrationUnitResult'] = result[:content]
