@@ -14,27 +14,36 @@ module Jackal
     #           "ExecZip": "DOWNLOAD_URI",
     #           "RawResult": true,
     #           "Env": {
-    #           }
+    #           },
+    #           OnlyIf": "SHELL_COMMAND",
+    #           NotIf": "SHELL_COMMAND"
     #         },
     #         "OnUpdate": {
     #           "Exec": "SHELL_COMMAND",
     #           "ExecZip": "DOWNLOAD_URI",
     #           "RawResult": true,
     #           "Env": {
-    #           }
+    #           },
+    #           },
+    #           OnlyIf": "SHELL_COMMAND",
+    #           NotIf": "SHELL_COMMAND"
     #         },
     #         "OnDelete": {
     #           "Exec": "SHELL_COMMAND",
     #           "ExecZip": "DOWNLOAD_URI",
     #           "RawResult": true,
     #           "Env": {
-    #           }
+    #           },
+    #           OnlyIf": "SHELL_COMMAND",
+    #           NotIf": "SHELL_COMMAND"
     #         },
     #         "Exec": "SHELL_COMMAND",
     #         "ExecZip": "DOWNLOAD_URI",
     #         "Env": {
     #         },
-    #         "RawResult": true
+    #         "RawResult": true,
+    #         "OnlyIf": "SHELL_COMMAND",
+    #         "NotIf": "SHELL_COMMAND"
     #       }
     #     }
     #   }
@@ -54,9 +63,13 @@ module Jackal
           parameters = rekey_hash(properties[:parameters])
           cfn_response = build_response(cfn_resource)
           unit = unit_for(cfn_resource[:request_type], parameters)
-          working_dir = create_working_directory(payload[:id])
-          run_unit(unit, working_dir, cfn_response)
-          FileUtils.rm_rf(working_dir)
+          if(unit_runnable?(unit))
+            working_dir = create_working_directory(payload[:id])
+            run_unit(unit, working_dir, cfn_response)
+            FileUtils.rm_rf(working_dir)
+          else
+            debug "Received unit for #{message} is not runnable due to conditions! #{unit}"
+          end
           respond_to_stack(cfn_response, cfn_resource[:response_url])
           job_completed(:jackal_cfn, payload, message)
         end
@@ -76,6 +89,57 @@ module Jackal
         )
         FileUtils.mkdir_p(dir_path)
         dir_path
+      end
+
+      # Determine if unit should be run based on conditional
+      # fields
+      #
+      # @param unit [Hash]
+      # @return [TrueClass, FalseClass]
+      def unit_runnable?(unit)
+        result = true
+        conditionals = Smash[
+          stdout = process_manager.create_io_tmp(Carnivore.uuid, 'stdout')
+          stderr = process_manager.create_io_tmp(Carnivore.uuid, 'stderr')
+          [:only_if, :not_if].map do |conditional_key|
+            if(unit[conditional_key])
+              debug "Executing conditional `#{conditional_key}`: #{unit[conditional_key]}"
+              conditional_result = false
+              process_manager.process(unit.hash, unit[conditional_key]) do |process|
+                process.io.stdout = stdout
+                process.io.stderr = stderr
+                process.cwd = '/tmp'
+                if(unit[:env])
+                  debug "Custom environment defined: #{unit[:env]}"
+                  process.environment.replace(unit[:env])
+                end
+                process.leader = true
+                process.start
+                begin
+                  process.poll_for_exit(config.fetch(:max_execution_time, 60))
+                  debug "Result of conditional `#{conditional_key}`: #{process.exit_code}"
+                  stdout.rewind
+                  stderr.rewind
+                  debug "Result of conditional `#{conditional_key}` output STDOUT: #{stdout.read}"
+                  debug "Result of conditional `#{conditional_key}` output STDERR: #{stderr.read}"
+                  conditional_result = process.exit_code == 0
+                rescue ChildProcess::TimeoutError
+                  process.stop
+                  conditional_result = false
+                end
+              end
+              [conditional_key, conditional_result]
+            end
+          end.compact
+        ]
+        if(conditionals.key?(:not_if) && conditionals.key?(:only_if))
+          result = !conditionals[:not_if] && conditionals[:only_if]
+        elsif(conditionals.key?(:not_if))
+          result = !conditionals.key?(:not_if)
+        elsif(conditionals.key?(:only_if))
+          result = conditionals[:only_if]
+        end
+        result
       end
 
       # Fetch compressed zip file from remote location and unpack into
@@ -144,11 +208,11 @@ module Jackal
           if(stdout.size > MAX_RESULT_SIZE)
             warn "Command result greater than allowed size: #{stdout.size} > #{MAX_RESULT_SIZE}"
           end
-          result[:content] = stdout.readpartial(MAX_RESULT_SIZE)
+          result[:content] = stdout.size > 0 ? stdout.readpartial(MAX_RESULT_SIZE) : ''
           if(result[:exit_code] != 0)
             debug "Execution of unit failed - #{unit}"
             stderr.rewind
-            result[:error_message] = stderr.readpartial(MAX_RESULT_SIZE)
+            result[:error_message] = stderr.size > 0 ? stderr.readpartial(MAX_RESULT_SIZE) : ''
             stderr.rewind
             stdout.rewind
             debug "Failed unit STDOUT: #{stdout.read}"
@@ -184,9 +248,10 @@ module Jackal
         base_key = "on_#{request_type.to_s.downcase}"
         result = Smash.new
         if(direct_unit = parameters[base_key])
-          [:exec, :exec_zip, :env, :raw_result].each do |p_key|
+          direct_unit = rekey_hash(direct_unit)
+          [:exec, :exec_zip, :env, :raw_result, :only_if, :not_if].each do |p_key|
             if(direct_unit[p_key])
-              result[p_key] = direct[p_key]
+              result[p_key] = direct_unit[p_key]
             end
           end
         end
@@ -206,6 +271,11 @@ module Jackal
         end
         unless(result.key?('raw_result'))
           result[:raw_result] = parameters.fetch('raw_result', true)
+        end
+        [:only_if, :not_if].each do |conditional_key|
+          if(!result.key?(conditional_key) && parameters.key?(conditional_key))
+            result[conditional_key] = parameters[conditional_key]
+          end
         end
         result[:env] ||= Smash.new
         result[:env]['CFN_REQUEST_TYPE'] = request_type.to_s.upcase
