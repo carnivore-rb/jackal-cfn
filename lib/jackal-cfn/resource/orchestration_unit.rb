@@ -65,7 +65,12 @@ module Jackal
           unit = unit_for(cfn_resource[:request_type], parameters)
           if(unit_runnable?(unit))
             working_dir = create_working_directory(payload[:id])
-            run_unit(unit, working_dir, cfn_response)
+            keepalive = every(10){ message.touch! }
+            begin
+              run_unit(unit, working_dir, cfn_response)
+            ensure
+              keepalive.cancel
+            end
             FileUtils.rm_rf(working_dir)
           else
             debug "Received unit for #{message} is not runnable due to conditions! #{unit}"
