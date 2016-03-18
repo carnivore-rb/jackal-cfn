@@ -197,7 +197,7 @@ module Jackal
               process.leader = true
               process.start
               begin
-                process.poll_for_exit(config.fetch(:max_execution_time, 60))
+                process.poll_for_exit(config.fetch(:max_execution_time, 500))
                 result[:exit_code] = process.exit_code
                 break if result[:exit_code] != 0
                 debug "Execution of command successful - #{exec_command}"
