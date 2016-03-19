@@ -51,7 +51,7 @@ module Jackal
     class OrchestrationUnit < Jackal::Cfn::Resource
 
       # Max result size
-      MAX_RESULT_SIZE = 4096
+      MAX_RESULT_SIZE = 2048
 
       # Execute orchestration unit
       #
