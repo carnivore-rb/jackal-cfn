@@ -337,13 +337,17 @@ Resource Usage:
       "CUSTOM_ENV_VARS": "FOR_COMMAND"
     },
     "RawResult": true,
+    "OnlyIf": "STRING_COMMAND",
+    "NotIf": "STRING_COMMAND",
     "OnCreate": {
       "Exec": "STRING_COMMAND",
       "ExecZip": "REMOTE_URL_TO_ZIP",
       "Env": {
         "CUSTOM_ENV_VARS": "FOR_COMMAND"
       },
-      "RawResult": true
+      "RawResult": true,
+      "OnlyIf": "STRING_COMMAND",
+      "NotIf": "STRING_COMMAND"
     },
     "OnUpdate": {
       "Exec": "STRING_COMMAND",
@@ -351,7 +355,9 @@ Resource Usage:
       "Env": {
         "CUSTOM_ENV_VARS": "FOR_COMMAND"
       },
-      "RawResult": true
+      "RawResult": true,
+      "OnlyIf": "STRING_COMMAND",
+      "NotIf": "STRING_COMMAND"
     },
     "OnDelete": {
       "Exec": "STRING_COMMAND",
@@ -359,7 +365,9 @@ Resource Usage:
       "Env": {
         "CUSTOM_ENV_VARS": "FOR_COMMAND"
       },
-      "RawResult": true
+      "RawResult": true,
+      "OnlyIf": "STRING_COMMAND",
+      "NotIf": "STRING_COMMAND"
     }
   }
 }
