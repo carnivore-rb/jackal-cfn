@@ -199,7 +199,6 @@ module Jackal
               begin
                 process.poll_for_exit(config.fetch(:max_execution_time, 500))
                 result[:exit_code] = process.exit_code
-                break if result[:exit_code] != 0
                 debug "Execution of command successful - #{exec_command}"
               rescue ChildProcess::TimeoutError
                 process.stop
@@ -207,6 +206,7 @@ module Jackal
                 result[:exit_code] = process.exit_code
               end
             end
+            break if result[:exit_code] != 0
           end
           result[:stop_time] = Time.now.to_i
           stdout.rewind
