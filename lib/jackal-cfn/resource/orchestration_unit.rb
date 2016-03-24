@@ -104,9 +104,9 @@ module Jackal
       def unit_runnable?(unit)
         result = true
         conditionals = Smash[
-          stdout = process_manager.create_io_tmp(Carnivore.uuid, 'stdout')
-          stderr = process_manager.create_io_tmp(Carnivore.uuid, 'stderr')
           [:only_if, :not_if].map do |conditional_key|
+            stdout = process_manager.create_io_tmp(Carnivore.uuid, 'stdout')
+            stderr = process_manager.create_io_tmp(Carnivore.uuid, 'stderr')
             if(unit[conditional_key])
               debug "Executing conditional `#{conditional_key}`: #{unit[conditional_key]}"
               conditional_result = false
