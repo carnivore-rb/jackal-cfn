@@ -1,3 +1,9 @@
+# v0.2.28
+* [fix] Break out of command loop at correct context in OrchestrationUnit
+* [enhancement] Reduce maximum allowed size of result included within response in OrchestrationUnit
+* [enhancement] Add keepalive while OrchestrationUnit is processed
+* [enhancement] Add conditional support to unit execution in OrchestrationUnit
+
 # v0.2.26
 * [fix] Update readpartial usage in OrchestrationUnit
 * [enhancement] Add debug output to OrchestrationUnit execution
