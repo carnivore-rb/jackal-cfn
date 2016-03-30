@@ -216,10 +216,12 @@ module Jackal
             warn "Command result greater than allowed size: #{stdout.size} > #{MAX_RESULT_SIZE}"
           end
           result[:content] = stdout.size > 0 ? stdout.readpartial(MAX_RESULT_SIZE) : ''
+          result[:content] = sanitize_string(result[:content])
           if(result[:exit_code] != 0)
             debug "Execution of unit failed - #{unit}"
             stderr.rewind
             result[:error_message] = stderr.size > 0 ? stderr.readpartial(MAX_RESULT_SIZE) : ''
+            result[:error_message] = sanitize_string(result[:error_message])
             stderr.rewind
             stdout.rewind
             debug "Failed unit STDOUT: #{stdout.read}"
@@ -287,6 +289,20 @@ module Jackal
         result[:env] ||= Smash.new
         result[:env]['CFN_REQUEST_TYPE'] = request_type.to_s.upcase
         result
+      end
+
+      # Remove any invalid characters
+      #
+      # @param string [String]
+      # @return [String]
+      def sanitize_string(string)
+        string.encode(
+          Encoding.find('UTF-8',
+            :invalid => :replace,
+            :undef => :replace,
+            :replace => ''
+          )
+        )
       end
 
     end
