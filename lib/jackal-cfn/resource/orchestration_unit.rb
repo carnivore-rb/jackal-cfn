@@ -181,11 +181,13 @@ module Jackal
         if(unit[:exec])
           debug "Unit to execute: #{unit[:exec]}"
           result = Smash.new
-          stdout = process_manager.create_io_tmp(Carnivore.uuid, 'stdout')
-          stderr = process_manager.create_io_tmp(Carnivore.uuid, 'stderr')
+          stdout = nil
+          stderr = nil
           result[:start_time] = Time.now.to_i
           [unit[:exec]].flatten.each do |exec_command|
             debug "Command to execute: #{exec_command}"
+            stdout = process_manager.create_io_tmp(Carnivore.uuid, 'stdout')
+            stderr = process_manager.create_io_tmp(Carnivore.uuid, 'stderr')
             process_manager.process(unit.hash, exec_command) do |process|
               process.io.stdout = stdout
               process.io.stderr = stderr
@@ -197,7 +199,7 @@ module Jackal
               process.leader = true
               process.start
               begin
-                process.poll_for_exit(config.fetch(:max_execution_time, 500))
+                process.poll_for_exit(config.fetch(:max_execution_time, 1000))
                 result[:exit_code] = process.exit_code
                 debug "Execution of command successful - #{exec_command}"
               rescue ChildProcess::TimeoutError
