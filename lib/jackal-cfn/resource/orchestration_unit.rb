@@ -297,11 +297,10 @@ module Jackal
       # @return [String]
       def sanitize_string(string)
         string.encode(
-          Encoding.find('UTF-8',
-            :invalid => :replace,
-            :undef => :replace,
-            :replace => ''
-          )
+          Encoding.find('UTF-8'),
+          :invalid => :replace,
+          :undef => :replace,
+          :replace => ''
         )
       end
 
